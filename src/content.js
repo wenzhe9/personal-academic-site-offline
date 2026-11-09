@@ -14,6 +14,9 @@ export function loadSite() {
     const news = Array.isArray(saved.news) && saved.news.every((item) => item && typeof item.date === "string" && typeof item.text === "string")
       ? saved.news
       : defaultSite.news;
+    const needsDailySeed = (saved.daily?.seedVersion || 0) < (defaultSite.daily.seedVersion || 0);
+    const savedCookingItems = Array.isArray(saved.daily?.cooking?.items) ? saved.daily.cooking.items : [];
+    const savedCatItems = Array.isArray(saved.daily?.cat?.items) ? saved.daily.cat.items : [];
     return {
       ...defaultSite,
       ...saved,
@@ -26,6 +29,14 @@ export function loadSite() {
       design: { ...defaultSite.design, ...saved.design },
       news,
       projects: defaultSite.projects.map((project, index) => ({ ...project, ...(saved.projects?.[index] || {}) })),
+      daily: {
+        ...defaultSite.daily,
+        ...saved.daily,
+        seedVersion: defaultSite.daily.seedVersion,
+        photography: Array.isArray(saved.daily?.photography) ? saved.daily.photography : defaultSite.daily.photography,
+        cooking: { ...defaultSite.daily.cooking, ...saved.daily?.cooking, items: needsDailySeed ? [...defaultSite.daily.cooking.items, ...savedCookingItems] : savedCookingItems },
+        cat: { ...defaultSite.daily.cat, ...saved.daily?.cat, items: needsDailySeed ? [...defaultSite.daily.cat.items, ...savedCatItems] : savedCatItems },
+      },
     };
   } catch {
     return defaultSite;

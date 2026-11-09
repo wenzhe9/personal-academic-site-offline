@@ -88,6 +88,22 @@ export async function publishSite({ content, token, getPdf }) {
     }
   }
 
+  const dailyCollections = [
+    ["photography", nextContent.daily?.photography || []],
+    ["cooking", nextContent.daily?.cooking?.items || []],
+    ["cat", nextContent.daily?.cat?.items || []],
+  ];
+  for (const [category, stories] of dailyCollections) {
+    for (let index = 0; index < stories.length; index += 1) {
+      const story = stories[index];
+      if (story.image?.startsWith("data:image/")) {
+        const path = `public/uploads/daily-${category}-${index + 1}.jpg`;
+        files.push({ path, content: dataUrlToBase64(story.image) });
+        story.image = `/${path.replace(/^public\//, "")}`;
+      }
+    }
+  }
+
   const cvPdf = await getPdf("cv");
   if (cvPdf) {
     files.push({ path: "public/uploads/cv.pdf", content: await fileToBase64(cvPdf) });

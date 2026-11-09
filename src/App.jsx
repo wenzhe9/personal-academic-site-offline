@@ -7,7 +7,22 @@ import { getAppPath, withBase } from "./paths.js";
 const routes = [
   { label: "Home", href: "" },
   { label: "Project", href: "projects/" },
+  { label: "Daily", href: "daily/" },
   { label: "CV", href: "cv/" },
+];
+
+const dailyStories = [
+  { place: "Shanghai", year: "2014", image: "assets/daily/shanghai.png", orientation: "portrait", text: "During a Tongji University summer school, I paused on an overpass and watched the traffic gather beneath the bridge, waiting for the lights to change." },
+  { place: "The university activity square", year: "2015", image: "assets/daily/university-square.png", orientation: "wide", text: "At a graduation show by the music department, I watched from a distance and began to understand that my own four years at university were coming to an end." },
+  { place: "Yantai Train Station", year: "2015", image: "assets/daily/yantai-station.png", orientation: "wide", text: "After graduating, I left my hometown to begin work in another city." },
+  { place: "Seaside in Qingdao", year: "2016", image: "assets/daily/qingdao-seaside.png", orientation: "wide", text: "A familiar road between the company and my apartment, passed every day." },
+  { place: "The Thames in London", year: "2017", image: "assets/daily/london-thames.png", orientation: "wide", text: "I came to London for further study. On the banks of the Thames, this was the most beautiful scene I found." },
+  { place: "The Tower Bridge in London", year: "2018", image: "assets/daily/tower-bridge.png", orientation: "wide", text: "On Christmas Day, I waited for a boat to Westminster Abbey at Tower Bridge - happy to use my camera to record the world." },
+  { place: "Hangzhou", year: "2019", image: "assets/daily/hangzhou.png", orientation: "wide", text: "After graduating from Goldsmiths, University of London, I began working in Hangzhou. This daily commute caught the city preparing for the 19th Asian Games." },
+  { place: "Lisbon", year: "2019", image: "assets/daily/lisbon.png", orientation: "portrait", text: "The first stop of my graduation trip - a city where every day felt sunny." },
+  { place: "Eboliang Yardang in Qinghai", year: "2021", image: "assets/daily/qinghai.png", orientation: "panorama", text: "A landscape that connects people and nature through a vast, fractal structure." },
+  { place: "Namcha Barwa in Tibet", year: "2023", image: "assets/daily/tibet.png", orientation: "portrait", text: "Here, time and life seem to extend indefinitely; each person feels small, yet deeply present." },
+  { place: "Hong Kong", year: "2024", image: "assets/daily/hong-kong.png", orientation: "portrait", text: "After the pandemic, I travelled to Hong Kong and photographed the Central-Mid-Levels Escalator." },
 ];
 
 function Header({ current, site }) {
@@ -88,6 +103,61 @@ function Projects({ site }) {
   );
 }
 
+function Daily({ site }) {
+  const frameStyle = { width: `min(${Math.max(site.design.contentWidth, 1120)}px, calc(100% - 48px))` };
+  const [activeStory, setActiveStory] = useState(null);
+  const [activeGallery, setActiveGallery] = useState([]);
+  const daily = site.daily || {};
+  const photography = Array.isArray(daily.photography) ? daily.photography : dailyStories;
+  const cooking = daily.cooking || { subtitle: "Kitchen notes", text: "Recipes and small pleasures from the kitchen are being collected here.", items: [] };
+  const cat = daily.cat || { subtitle: "Daily company", text: "A corner for quiet naps, curious moments, and life with a cat.", items: [] };
+  const sections = [
+    { key: "photography", index: "01", title: "Photography", subtitle: "2014 - 2024", stories: photography, empty: "No photography entries yet." },
+    { key: "cooking", index: "02", title: "Cooking", subtitle: cooking.subtitle, stories: Array.isArray(cooking.items) ? cooking.items : [], empty: cooking.text },
+    { key: "cat", index: "03", title: "Cat", subtitle: cat.subtitle, stories: Array.isArray(cat.items) ? cat.items : [], empty: cat.text },
+  ];
+  const showStory = (offset) => setActiveStory((current) => {
+    const currentIndex = activeGallery.indexOf(current);
+    const nextIndex = (Math.max(0, currentIndex) + offset + activeGallery.length) % activeGallery.length;
+    return activeGallery[nextIndex];
+  });
+  useEffect(() => {
+    if (!activeStory) return undefined;
+    const handleKeydown = (event) => {
+      if (event.key === "Escape") setActiveStory(null);
+      if (event.key === "ArrowLeft") { event.preventDefault(); showStory(-1); }
+      if (event.key === "ArrowRight") { event.preventDefault(); showStory(1); }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [activeStory, activeGallery]);
+  const renderGallery = (stories, label) => {
+    const visibleStories = stories.filter((story) => story.visible !== false);
+    if (!visibleStories.length) return <div className="daily-empty"><p>{label}</p></div>;
+    return <div className="daily-gallery" aria-label={`${label} archive`}>
+      {visibleStories.map((story, index) => (
+        <article className={`daily-card daily-card--${story.orientation || "wide"}`} key={`${story.place}-${story.year}-${index}`}>
+          <button className="daily-image-wrap" type="button" onClick={() => { setActiveGallery(visibleStories); setActiveStory(story); }} aria-label={`View ${story.place} photograph`}><img src={withBase(story.image)} alt={`${story.place}, ${story.year}`} loading={index < 4 ? "eager" : "lazy"} /></button>
+          <div className="daily-card-copy"><p className="daily-meta">{story.year}</p><h2>{story.place}</h2><p>{story.text}</p></div>
+        </article>
+      ))}
+    </div>;
+  };
+  return (
+    <div className="site-frame daily-frame" style={frameStyle}>
+      <Header current="Daily" site={site} />
+      <nav className="daily-categories" aria-label="Daily categories">
+        <a href="#photography" aria-label="Photography">📷</a><a href="#cooking" aria-label="Cooking">🍱</a><a href="#cat" aria-label="Cat">🐱</a>
+      </nav>
+      <main className="daily-page">
+        {sections.map((section) => <section className="daily-section" id={section.key} aria-labelledby={`${section.key}-title`} key={section.key}><div className="daily-section-heading"><p>{section.index}</p><div><h2 id={`${section.key}-title`}>{section.title}</h2><span>{section.subtitle}</span></div></div>{renderGallery(section.stories, section.empty)}</section>)}
+        {activeStory && <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label={`${activeStory.place} photograph`} onClick={() => setActiveStory(null)}><button className="photo-lightbox-close" type="button" aria-label="Close image viewer" onClick={() => setActiveStory(null)}>×</button><button className="photo-lightbox-nav photo-lightbox-prev" type="button" aria-label="Previous photograph" onClick={(event) => { event.stopPropagation(); showStory(-1); }}>‹</button><figure onClick={(event) => event.stopPropagation()}><img src={withBase(activeStory.image)} alt={`${activeStory.place}, ${activeStory.year}`} /><figcaption><strong>{activeStory.place}</strong><span>{activeStory.year}</span></figcaption></figure><button className="photo-lightbox-nav photo-lightbox-next" type="button" aria-label="Next photograph" onClick={(event) => { event.stopPropagation(); showStory(1); }}>›</button></div>}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 function PdfDocument({ storageKey, fallback = "", title, emptyMessage = "No PDF has been uploaded yet.", useLocal = true, showOpenButton = false }) {
   const [url, setUrl] = useState(fallback);
   useEffect(() => {
@@ -147,6 +217,7 @@ function PublicSite({ path }) {
 
   if (path.startsWith("/projects")) return <Projects site={site} />;
   if (path.startsWith("/project/")) return <ProjectPdf site={site} useLocalPdf={useLocalDraft} />;
+  if (path.startsWith("/daily")) return <Daily site={site} />;
   if (path.startsWith("/cv")) return <CV site={site} useLocalPdf={useLocalDraft} />;
   return <Home site={site} />;
 }

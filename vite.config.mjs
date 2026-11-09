@@ -13,6 +13,7 @@ const pageInputs = {
   home: resolve(import.meta.dirname, "index.html"),
   projects: resolve(import.meta.dirname, "projects/index.html"),
   project: resolve(import.meta.dirname, "project/index.html"),
+  daily: resolve(import.meta.dirname, "daily/index.html"),
   cv: resolve(import.meta.dirname, "cv/index.html"),
 };
 

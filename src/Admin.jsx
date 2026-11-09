@@ -45,12 +45,16 @@ export function Admin() {
   const [content, setContent] = useState(() => clone(loadSite()));
   const [panel, setPanel] = useState("home");
   const [projectIndex, setProjectIndex] = useState(0);
+  const [dailyCategory, setDailyCategory] = useState("photography");
+  const [dailyIndex, setDailyIndex] = useState(0);
   const [status, setStatus] = useState("Saved locally");
   const [revision, setRevision] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [githubToken, setGithubToken] = useState("");
   const [publishing, setPublishing] = useState(false);
   const isOnlineEditor = window.location.hostname.endsWith("github.io");
+  const daily = content.daily || defaultSite.daily;
+  const dailyItems = dailyCategory === "photography" ? daily.photography : (daily[dailyCategory].items || []);
 
   const update = (next) => {
     setContent(next);
@@ -105,7 +109,29 @@ export function Admin() {
   };
   const upload = async (file) => { if (file) updateProject("image", await compressImage(file)); };
   const uploadPortrait = async (file) => { if (file) update({ ...content, portrait: await compressImage(file) }); };
-  const preview = panel === "projects" ? withBase("projects/") : panel === "cv" ? withBase("cv/") : withBase();
+  const updateDaily = (nextDaily) => update({ ...content, daily: nextDaily });
+  const updateDailyItems = (items) => updateDaily(dailyCategory === "photography" ? { ...daily, photography: items } : { ...daily, [dailyCategory]: { ...daily[dailyCategory], items } });
+  const updateDailyStory = (key, value) => updateDailyItems(dailyItems.map((story, index) => index === dailyIndex ? { ...story, [key]: value } : story));
+  const moveDailyStory = (offset) => {
+    const targetIndex = dailyIndex + offset;
+    if (targetIndex < 0 || targetIndex >= dailyItems.length) return;
+    const items = [...dailyItems];
+    [items[dailyIndex], items[targetIndex]] = [items[targetIndex], items[dailyIndex]];
+    updateDailyItems(items);
+    setDailyIndex(targetIndex);
+  };
+  const addDailyStory = () => {
+    const items = [...dailyItems, { year: "", place: "New entry", image: "", text: "", visible: true }];
+    updateDailyItems(items);
+    setDailyIndex(items.length - 1);
+  };
+  const removeDailyStory = () => {
+    if (!dailyItems.length) return;
+    updateDailyItems(dailyItems.filter((_, index) => index !== dailyIndex));
+    setDailyIndex(Math.max(0, dailyIndex - 1));
+  };
+  const uploadDailyImage = async (file) => { if (file) updateDailyStory("image", await compressImage(file)); };
+  const preview = panel === "projects" ? withBase("projects/") : panel === "daily" ? withBase("daily/") : panel === "cv" ? withBase("cv/") : withBase();
 
   return <main className="ve-shell">
     <header className="ve-header">
@@ -114,9 +140,10 @@ export function Admin() {
     </header>
     <div className="ve-workspace">
       <aside className="ve-sidebar">
-        <nav className="ve-tabs" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+        <nav className="ve-tabs" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
           <button className={panel === "home" ? "active" : ""} onClick={() => setPanel("home")}>Home</button>
           <button className={panel === "projects" ? "active" : ""} onClick={() => setPanel("projects")}>Projects</button>
+          <button className={panel === "daily" ? "active" : ""} onClick={() => setPanel("daily")}>Daily</button>
           <button className={panel === "cv" ? "active" : ""} onClick={() => setPanel("cv")}>CV</button>
           <button className={panel === "layout" ? "active" : ""} onClick={() => setPanel("layout")}>Layout</button>
           <button className={panel === "publish" ? "active" : ""} onClick={() => setPanel("publish")}>Publish</button>
@@ -161,6 +188,28 @@ export function Admin() {
           <Field label="Period / role" value={content.projects[projectIndex].period} onChange={(value) => updateProject("period", value)} />
           <Field area label="Summary" value={content.projects[projectIndex].summary} onChange={(value) => updateProject("summary", value)} />
           <Field area label="Details" value={content.projects[projectIndex].detail} onChange={(value) => updateProject("detail", value)} />
+        </section>}
+
+        {panel === "daily" && <section className="ve-panel">
+          <h2>Daily content</h2>
+          <div className="ve-daily-categories"><button className={dailyCategory === "photography" ? "active" : ""} onClick={() => { setDailyCategory("photography"); setDailyIndex(0); }}>Photography</button><button className={dailyCategory === "cooking" ? "active" : ""} onClick={() => { setDailyCategory("cooking"); setDailyIndex(0); }}>Cooking</button><button className={dailyCategory === "cat" ? "active" : ""} onClick={() => { setDailyCategory("cat"); setDailyIndex(0); }}>Cat</button></div>
+          {dailyCategory !== "photography" && <><Field label="Section subtitle" value={daily[dailyCategory].subtitle || ""} onChange={(value) => updateDaily({ ...daily, [dailyCategory]: { ...daily[dailyCategory], subtitle: value } })} /><Field area label="Empty-state description" value={daily[dailyCategory].text || ""} onChange={(value) => updateDaily({ ...daily, [dailyCategory]: { ...daily[dailyCategory], text: value } })} /></>}
+          <h3>{dailyCategory === "photography" ? "Photography" : dailyCategory === "cooking" ? "Cooking" : "Cat"} entries</h3>
+          <div className="ve-project-tabs">{dailyItems.map((story, index) => <button className={dailyIndex === index ? "active" : ""} style={{ opacity: story.visible === false ? .48 : 1 }} key={`${story.place}-${index}`} onClick={() => setDailyIndex(index)} title={story.place || "New entry"}>{index + 1}</button>)}</div>
+          {dailyItems.length > 0 && <><div className="ve-project-controls">
+            <label><input type="checkbox" checked={dailyItems[dailyIndex].visible !== false} onChange={(event) => updateDailyStory("visible", event.target.checked)} /> Show entry</label>
+            <button type="button" disabled={dailyIndex === 0} onClick={() => moveDailyStory(-1)}>Move earlier</button>
+            <button type="button" disabled={dailyIndex === dailyItems.length - 1} onClick={() => moveDailyStory(1)}>Move later</button>
+          </div>
+          <div className="ve-upload">
+            {dailyItems[dailyIndex].image && <img src={dailyItems[dailyIndex].image} alt="Current daily entry" />}
+            <label><span>{dailyItems[dailyIndex].image ? "Replace image" : "Upload image"}</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => uploadDailyImage(event.target.files?.[0])} /></label>
+            {dailyItems[dailyIndex].image && <button type="button" onClick={() => updateDailyStory("image", "")}>Remove</button>}
+          </div>
+          <Field label="Year" value={dailyItems[dailyIndex].year || ""} onChange={(value) => updateDailyStory("year", value)} />
+          <Field label="Title / location" value={dailyItems[dailyIndex].place || ""} onChange={(value) => updateDailyStory("place", value)} />
+          <Field area label="Description" value={dailyItems[dailyIndex].text || ""} onChange={(value) => updateDailyStory("text", value)} /></>}
+          <div className="ve-story-actions"><button type="button" onClick={addDailyStory}>Add entry</button><button type="button" disabled={!dailyItems.length} onClick={removeDailyStory}>Remove entry</button></div>
         </section>}
 
         {panel === "cv" && <section className="ve-panel">
