@@ -112,9 +112,9 @@ function Daily({ site }) {
   const cooking = daily.cooking || { subtitle: "Kitchen notes", text: "Recipes and small pleasures from the kitchen are being collected here.", items: [] };
   const cat = daily.cat || { subtitle: "Daily company", text: "A corner for quiet naps, curious moments, and life with a cat.", items: [] };
   const sections = [
-    { key: "photography", index: "01", title: "Photography", subtitle: "2014 - 2024", stories: photography, empty: "No photography entries yet." },
+    { key: "cat", index: "01", title: "Cat", subtitle: cat.subtitle, stories: Array.isArray(cat.items) ? cat.items : [], empty: cat.text },
     { key: "cooking", index: "02", title: "Cooking", subtitle: cooking.subtitle, stories: Array.isArray(cooking.items) ? cooking.items : [], empty: cooking.text },
-    { key: "cat", index: "03", title: "Cat", subtitle: cat.subtitle, stories: Array.isArray(cat.items) ? cat.items : [], empty: cat.text },
+    { key: "photography", index: "03", title: "Photography", subtitle: "2014 - 2024", stories: photography, empty: "No photography entries yet." },
   ];
   const showStory = (offset) => setActiveStory((current) => {
     const currentIndex = activeGallery.indexOf(current);
@@ -147,7 +147,7 @@ function Daily({ site }) {
     <div className="site-frame daily-frame" style={frameStyle}>
       <Header current="Daily" site={site} />
       <nav className="daily-categories" aria-label="Daily categories">
-        <a href="#photography" aria-label="Photography">📷</a><a href="#cooking" aria-label="Cooking">🍱</a><a href="#cat" aria-label="Cat">🐱</a>
+        <a href="#cat" aria-label="Cat">🐱</a><a href="#cooking" aria-label="Cooking">🍱</a><a href="#photography" aria-label="Photography">📷</a>
       </nav>
       <main className="daily-page">
         {sections.map((section) => <section className="daily-section" id={section.key} aria-labelledby={`${section.key}-title`} key={section.key}><div className="daily-section-heading"><p>{section.index}</p><div><h2 id={`${section.key}-title`}>{section.title}</h2><span>{section.subtitle}</span></div></div>{renderGallery(section.stories, section.empty)}</section>)}
